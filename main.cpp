@@ -39,20 +39,56 @@ int main() {
 
     glViewport(0, 0, 800, 600);
 
-    const float vertices[] = {
-            -0.3f, -0.0f, 0.0f,
-            0.3f, -0.0f, 0.0f,
-            0.0f, 0.8f, 0.0f,
+    // Base of the F
+    constexpr float v1[] = {
+            -0.1f, -0.5f, 0.0f,
+            -0.1f, 0.8f, 0.0f,
+            0.2f, 0.8f, 0.0f,
     };
 
-    const float vertices2[] = {
-        0.3f, 0.0f, 0.0f,
-        -0.3f, 0.0f, 0.0f,
-        -0.0f, -0.8f, 0.0f
+    constexpr float v2[] = {
+        -0.1f, -0.5f, 0.0f,
+        0.2f, -0.5f, 0.0f,
+        0.2f, 0.8f, 0.0f
+    };
+    // End F base
+
+    // Top arm of the F
+    constexpr float v3[] = {
+        0.5f, 0.8f, 0.0f,
+        0.5f, 0.6f, 0.0f,
+        0.2f, 0.8f, 0.0f
     };
 
-    Triangle drawableTriangle = getDrawableTriangle(vertices, sizeof(vertices), orangeFragmentShaderSource);
-    Triangle drawableTriangle2 = getDrawableTriangle(vertices2, sizeof(vertices2), yellowFragmentShaderSource);
+
+    constexpr float v4[] = {
+        0.5f, 0.6f, 0.0f,
+        0.2f, 0.6f, 0.0f,
+        0.2f, 0.8f, 0.0f
+    };
+    // End top arm
+
+    // Bottom arm of the F
+    constexpr float v5[] = {
+        0.5f, 0.4f, 0.0f,
+        0.5f, 0.2f, 0.0f,
+        0.2f, 0.4f, 0.0f
+    };
+
+
+    constexpr float v6[] = {
+        0.5f, 0.2f, 0.0f,
+        0.2f, 0.2f, 0.0f,
+        0.2f, 0.4f, 0.0f
+    };
+    // End bottom arm
+
+    const Triangle drawableTriangle1 = getDrawableTriangle(v1, sizeof(v1), orangeFragmentShaderSource);
+    const Triangle drawableTriangle2 = getDrawableTriangle(v2, sizeof(v2), yellowFragmentShaderSource);
+    const Triangle drawableTriangle3 = getDrawableTriangle(v3, sizeof(v3), orangeFragmentShaderSource);
+    const Triangle drawableTriangle4 = getDrawableTriangle(v4, sizeof(v4), yellowFragmentShaderSource);
+    const Triangle drawableTriangle5 = getDrawableTriangle(v5, sizeof(v5), orangeFragmentShaderSource);
+    const Triangle drawableTriangle6 = getDrawableTriangle(v6, sizeof(v6), yellowFragmentShaderSource);
 
     // Render loop
     while(!glfwWindowShouldClose(window)) {
@@ -63,9 +99,17 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Draw triangle one
-        drawTriangle(drawableTriangle);
+        drawTriangle(drawableTriangle1);
         // Draw triangle two
         drawTriangle(drawableTriangle2);
+        // Draw triangle three
+        drawTriangle(drawableTriangle3);
+        // Draw triangle four
+        drawTriangle(drawableTriangle4);
+        // Draw triangle 5
+        drawTriangle(drawableTriangle5);
+        // Draw triangle 6
+        drawTriangle(drawableTriangle6);
 
         // Check/call events and swap the buffers
         glfwPollEvents();
@@ -148,7 +192,7 @@ Triangle getDrawableTriangle(const float* vertices, size_t vertexSize, const cha
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertexSize, vertices, GL_STATIC_DRAW);
     // 3. Set vertex attribute pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
 
     return Triangle{shaderProgram, VBO};
