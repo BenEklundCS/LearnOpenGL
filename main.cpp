@@ -139,7 +139,7 @@ Triangle getDrawableTriangle(const float* vertices, size_t vertexSize) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertexSize, vertices, GL_STATIC_DRAW);
 
-    Shader myShader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs");
+    Shader myShader("../shaders/vertex_shader.vs", "../shaders/fragment_shader.fs");
 
     float texCoords[] = {
             0.0f, 0.0f,  // lower-left corner
