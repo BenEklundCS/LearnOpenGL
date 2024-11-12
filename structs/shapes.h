@@ -10,7 +10,7 @@ struct TriangleVertexArray {
 };
 
 struct Triangle {
-    unsigned int shaderProgram;
+    Shader shaderProgram;
     unsigned int VAO;
 };
 

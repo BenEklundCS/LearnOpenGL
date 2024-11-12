@@ -1,23 +1,19 @@
 #include "external/glad/include/glad/glad.h"
-#include "shaders/shaders.h"
+#include "shaders.h"
 #include "structs/shapes.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cstdlib>
+#include <cmath>
 
 // main application process functions
 GLFWwindow* createWindow();
 void processInput(GLFWwindow* window);
-void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
 // shapes
-Triangle getDrawableTriangle(const float* vertices, size_t vertexSize, const char * fragmentShaderSource);
+Triangle getDrawableTriangle(const float* vertices, size_t vertexSize);
 void drawTriangle(Triangle triangle);
-
-// Shaders
-unsigned int compileVertexShader(const char * vertexShaderSource);
-unsigned int compileFragmentShader(const char * fragmentShaderSource);
-unsigned int compileShaderProgram(unsigned int vertexShader, unsigned int fragmentShader);
+void updateTriangle(Triangle triangle);
 
 int main() {
     // Initialize the glfw window library
@@ -40,55 +36,16 @@ int main() {
     glViewport(0, 0, 800, 600);
 
     // Base of the F
-    constexpr float v1[] = {
-            -0.1f, -0.5f, 0.0f,
-            -0.1f, 0.8f, 0.0f,
-            0.2f, 0.8f, 0.0f,
+    float vertices[] = {
+            // positions         // colors
+            0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+            -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+            0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top
     };
 
-    constexpr float v2[] = {
-        -0.1f, -0.5f, 0.0f,
-        0.2f, -0.5f, 0.0f,
-        0.2f, 0.8f, 0.0f
-    };
-    // End F base
-
-    // Top arm of the F
-    constexpr float v3[] = {
-        0.5f, 0.8f, 0.0f,
-        0.5f, 0.6f, 0.0f,
-        0.2f, 0.8f, 0.0f
-    };
-
-
-    constexpr float v4[] = {
-        0.5f, 0.6f, 0.0f,
-        0.2f, 0.6f, 0.0f,
-        0.2f, 0.8f, 0.0f
-    };
-    // End top arm
-
-    // Bottom arm of the F
-    constexpr float v5[] = {
-        0.5f, 0.4f, 0.0f,
-        0.5f, 0.2f, 0.0f,
-        0.2f, 0.4f, 0.0f
-    };
-
-
-    constexpr float v6[] = {
-        0.5f, 0.2f, 0.0f,
-        0.2f, 0.2f, 0.0f,
-        0.2f, 0.4f, 0.0f
-    };
     // End bottom arm
 
-    const Triangle drawableTriangle1 = getDrawableTriangle(v1, sizeof(v1), orangeFragmentShaderSource);
-    const Triangle drawableTriangle2 = getDrawableTriangle(v2, sizeof(v2), yellowFragmentShaderSource);
-    const Triangle drawableTriangle3 = getDrawableTriangle(v3, sizeof(v3), orangeFragmentShaderSource);
-    const Triangle drawableTriangle4 = getDrawableTriangle(v4, sizeof(v4), yellowFragmentShaderSource);
-    const Triangle drawableTriangle5 = getDrawableTriangle(v5, sizeof(v5), orangeFragmentShaderSource);
-    const Triangle drawableTriangle6 = getDrawableTriangle(v6, sizeof(v6), yellowFragmentShaderSource);
+    const Triangle drawableTriangle1 = getDrawableTriangle(vertices, sizeof(vertices));
 
     // Render loop
     while(!glfwWindowShouldClose(window)) {
@@ -98,18 +55,10 @@ int main() {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // Update triangle
+        updateTriangle(drawableTriangle1);
         // Draw triangle one
         drawTriangle(drawableTriangle1);
-        // Draw triangle two
-        drawTriangle(drawableTriangle2);
-        // Draw triangle three
-        drawTriangle(drawableTriangle3);
-        // Draw triangle four
-        drawTriangle(drawableTriangle4);
-        // Draw triangle 5
-        drawTriangle(drawableTriangle5);
-        // Draw triangle 6
-        drawTriangle(drawableTriangle6);
 
         // Check/call events and swap the buffers
         glfwPollEvents();
@@ -124,6 +73,8 @@ int main() {
 #pragma region main application functions
 
 GLFWwindow* createWindow() {
+    const int width = 800;
+    const int height = 600;
     // Create the window object
     GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", nullptr, nullptr);
 
@@ -134,8 +85,12 @@ GLFWwindow* createWindow() {
         exit(EXIT_FAILURE);
     }
 
+    auto resizeWindowCallback = [](GLFWwindow* window, int width, int height) -> void {
+        glViewport(0, 0, width, height);
+    };
+
     // Register window resize callback function
-    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+    glfwSetFramebufferSizeCallback(window, resizeWindowCallback);
 
     return window;
 }
@@ -148,10 +103,6 @@ void processInput(GLFWwindow* window) {
     }
 }
 
-void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
 #pragma endregion
 
 // ****** //
@@ -159,29 +110,42 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 // ****** //
 
 void drawTriangle(const Triangle triangle) {
-    glUseProgram(triangle.shaderProgram); // use the triangle shader program
+    triangle.shaderProgram.use();
     glBindVertexArray(triangle.VAO); // use the triangle vertex array object
     glDrawArrays(GL_TRIANGLES, 0, 3); // draw
     glBindVertexArray(0); // unbind triangle
 }
 
-Triangle getDrawableTriangle(const float* vertices, size_t vertexSize, const char * fragmentShaderSource) {
+float x_speed = 0.01f;
+float y_speed = 0.005f;
+
+void updateTriangle(const Triangle triangle) {
+    int posOffsetLocation = glGetUniformLocation(triangle.shaderProgram.getId(), "posOffset");
+    float current_offset[3];
+    glGetUniformfv(triangle.shaderProgram.getId(), posOffsetLocation, current_offset);
+    if (current_offset[0] > 1.0f || current_offset[0] <= -1.0f) {
+        x_speed *= -1;
+    }
+    if (current_offset[1] > 1.0f || current_offset[1] <= -1.0f) {
+        y_speed *= -1;
+    }
+    glUseProgram(triangle.shaderProgram.getId());
+    glUniform3f(posOffsetLocation, current_offset[0] + x_speed, current_offset[1] + y_speed, current_offset[2]);
+}
+
+Triangle getDrawableTriangle(const float* vertices, size_t vertexSize) {
     unsigned int VBO; // vertex buffer object creation
     glGenBuffers(1, &VBO); // generate buffers with a unique ID
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertexSize, vertices, GL_STATIC_DRAW);
 
-    // Load vertex shader
-    const unsigned int vertexShader = compileVertexShader(vertexShaderSource);
-    // Load fragment shader
-    const unsigned int fragmentShader = compileFragmentShader(fragmentShaderSource);
-    // Load shader program
-    const unsigned int shaderProgram = compileShaderProgram(vertexShader, fragmentShader);
+    Shader myShader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs");
 
-    //glUseProgram(shaderProgram);
-    // Now that the program is being used, the vertex/fragment shaders are no longer needed
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    float texCoords[] = {
+            0.0f, 0.0f,  // lower-left corner
+            1.0f, 0.0f,  // lower-right corner
+            0.5f, 1.0f   // top-center corner
+    };
 
     unsigned int VAO;
     glGenVertexArrays(1, &VAO);
@@ -192,71 +156,15 @@ Triangle getDrawableTriangle(const float* vertices, size_t vertexSize, const cha
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertexSize, vertices, GL_STATIC_DRAW);
     // 3. Set vertex attribute pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    glEnableVertexAttribArray(1);
 
-    return Triangle{shaderProgram, VBO};
+    return Triangle{myShader, VBO};
 }
-
-#pragma region shaders and programs
-
-unsigned int compileShaderProgram(const unsigned int vertexShader, const unsigned int fragmentShader) {
-    // Link compiled shaders to a shader program object
-    const unsigned int shaderProgram = glCreateProgram();
-
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    int success;
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if(!success) {
-        char infoLog[512];
-        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM:COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    return shaderProgram;
-}
-
-unsigned int compileVertexShader(const char * vertexShaderSource) {
-    // Get shader
-    const unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
-    glCompileShader(vertexShader);
-
-    // Check to see if shader compiled
-    int success;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-
-    if(!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX:COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    return vertexShader;
-}
-
-unsigned int compileFragmentShader(const char * fragmentShaderSource) {
-    // Load fragment shader
-    const unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
-    glCompileShader(fragmentShader);
-
-    // Check to see if shader compiled
-    int success;
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-
-    if(!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT:COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    return fragmentShader;
-}
-
-#pragma endregion
 
 
 
