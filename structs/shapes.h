@@ -12,6 +12,9 @@ struct TriangleVertexArray {
 struct Triangle {
     Shader shaderProgram;
     unsigned int VAO;
+    unsigned int texture;
+    unsigned int VBO;
+    unsigned int EBO;
 };
 
 #endif //LEARNOPENGL_SHAPES_H

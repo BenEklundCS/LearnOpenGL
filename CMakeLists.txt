@@ -18,7 +18,8 @@ add_subdirectory("C:/glfw-3.4/glfw-3.4" "${CMAKE_BINARY_DIR}/glfw")
 add_executable(LearnOpenGL main.cpp
         shaders/shaders.h
         structs/shapes.h
-        ${CMAKE_SOURCE_DIR}/external/glad/src/glad.c)
+        ${CMAKE_SOURCE_DIR}/external/glad/src/glad.c
+        external/stb_image/stb_image.h)
 
 # Link GLFW and any other system libraries required by GLFW
 target_link_libraries(LearnOpenGL glfw)
